@@ -10,24 +10,42 @@
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         h2 { font-size: 1.5em; margin-bottom: 10px; color: #1a73e8; }
         
-        /* --- Kamera és A4 Célkereszt dizájn --- */
-        .camera-wrapper { position: relative; display: none; margin-bottom: 10px; width: 100%; border-radius: 8px; overflow: hidden; background: #000; aspect-ratio: 16/9; /* A legtöbb videó aránya */ }
-        video { width: 100%; display: block; object-fit: cover; }
+        /* --- Kamera és A4 Célkereszt dizájn - JAVÍTVA --- */
+        .camera-wrapper { 
+            position: relative; 
+            display: none; 
+            margin-bottom: 10px; 
+            width: 100%; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            background: #000; 
+            /* Eltávolítva a fix 16/9 arány, hogy a tartalom határozza meg a magasságot */
+            min-height: 300px; /* Alap magasság, ha a videó még nem töltött be */
+        }
+        
+        /* A videó magassága alkalmazkodik, nem vágjuk le! */
+        video { 
+            width: 100%; 
+            height: auto; 
+            display: block; 
+            object-fit: contain; /* Contain: megmutatja a teljes képet levágás nélkül */
+        }
         
         /* Dinamikus A4 arányú célkereszt */
         .scanner-guide {
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            width: calc(100% - 40px); /* 20px padding */
-            max-width: 400px;
-            aspect-ratio: 210/297; /* Pontos A4 arány */
-            border: 3px solid #ff9800; /* Narancssárga keret */
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7); /* Erősebb sötétítés a kereten kívül */
+            /* A szélességet a konténerhez igazítjuk, kis margóval */
+            width: 85%; 
+            max-width: 350px;
+            aspect-ratio: 210/297; /* Pontos A4 arány (Álló) */
+            border: 3px solid #ff9800;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6); /* Enyhébb árnyékolás */
             pointer-events: none;
             border-radius: 4px;
             box-sizing: border-box;
-            opacity: 0.8;
+            opacity: 1; /* Teljesen látható keret */
         }
 
         button, .file-input-label { background: #1a73e8; color: white; border: none; padding: 12px 18px; margin: 5px; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: 0.3s; width: 100%; max-width: 250px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
@@ -39,13 +57,10 @@
         .controls { text-align: left; margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; font-size: 14px; }
         input[type="range"] { width: 100%; margin-top: 8px; cursor: pointer; }
         
-        /* Fájlnév beviteli mező */
         #fileNameInput { width: calc(100% - 20px); max-width: 300px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin: 15px 0; font-size: 15px; box-sizing: border-box; text-align: center; }
 
-        /* Fájlfeltöltés gomb dizájn */
         input[type="file"] { display: none; }
         
-        /* Statisztika kijelző */
         .stats-box { background: #e3f2fd; color: #0d47a1; padding: 10px; border-radius: 8px; margin: 10px 0; font-weight: bold; display: flex; justify-content: space-between; font-size: 13px; }
         
         .gallery { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; justify-content: center; }
@@ -61,9 +76,9 @@
 <div class="container">
     <h2>📄 Webes PDF Eszköz</h2>
     
-    <!-- 1. Kamerakezelés -->
+    <!-- Kamerakezelés -->
     <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 5px;">
-        <button id="startCameraBtn">📷 Kamera</button>
+        <button id="startCameraBtn">📷 Kamera Indítása</button>
         <button id="captureBtn" style="display: none;">📸 Keret Fotózása</button>
     </div>
     
@@ -74,7 +89,7 @@
     
     <hr>
     
-    <!-- 2. Képfeltöltés -->
+    <!-- Képfeltöltés -->
     <label for="imageUpload" class="file-input-label btn-success">📁 Képek Feltöltése</label>
     <input type="file" id="imageUpload" accept="image/*" multiple>
     
@@ -97,7 +112,7 @@
 
     <hr>
     
-    <!-- 3. Fájlnév és Letöltés -->
+    <!-- Fájlnév és Letöltés -->
     <input type="text" id="fileNameInput" placeholder="pl.: szkennelt_doku" value="">
     .pdf<br>
     
@@ -125,58 +140,89 @@
     let pages = [];
     let stream = null;
 
-    // Fájlnév alapértelmezés: scan_[időbélyeg]
+    // Fájlnév alapértelmezés
     const setFileNamePlaceholder = () => {
         const now = new Date();
-        const timestamp = now.getFullYear() + '' + (now.getMonth()+1) + '' + now.getDate() + '_' + now.getHours() + '' + now.getMinutes();
+        const timestamp = now.getFullYear() + '' + String(now.getMonth()+1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + '_' + String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
         fileNameInput.placeholder = `scan_${timestamp}`;
     };
     setFileNamePlaceholder();
 
-    // 1. Kamera kezelése
+    // 1. Kamera indítása
     document.getElementById('startCameraBtn').addEventListener('click', async () => {
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } });
+            // Kérjük a legmagasabb elérhető felbontást, preferálva az álló tájolást mobilokon
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: 'environment',
+                    width: { ideal: 4096 },
+                    height: { ideal: 2160 }
+                } 
+            });
             video.srcObject = stream;
-            cameraWrapper.style.display = 'block';
-            document.getElementById('captureBtn').style.display = 'inline-flex';
-            document.getElementById('startCameraBtn').style.display = 'none';
+            
+            // Megvárjuk, amíg a videó betölt, hogy beállítsa a megfelelő magasságot
+            video.onloadedmetadata = () => {
+                cameraWrapper.style.display = 'block';
+                document.getElementById('captureBtn').style.display = 'inline-flex';
+                document.getElementById('startCameraBtn').style.display = 'none';
+                
+                // Beállítjuk a keret magasságát a videó tényleges megjelenített méretéhez
+                adjustGuideSize();
+            };
         } catch (err) {
-            alert('Hiba: Nem férek hozzá a kamerához!');
+            alert('Hiba: Nem férek hozzá a kamerához! Engedélyezd a böngészőben.');
         }
     });
 
-    // 2. Fotózás és VÁGÁS az A4 keret alapján
-    document.getElementById('captureBtn').addEventListener('click', () => {
-        // A matek a videó és a CSS keret arányosításához
+    // Ablak átméretezésekor újraigazítjuk a keretet
+    window.addEventListener('resize', () => {
+        if (cameraWrapper.style.display === 'block') {
+            adjustGuideSize();
+        }
+    });
+
+    function adjustGuideSize() {
+        // Kiszámítja a videó tényleges megjelenített méretét a 'contain' miatt
         const videoRatio = video.videoWidth / video.videoHeight;
         const wrapperWidth = cameraWrapper.clientWidth;
-        const wrapperHeight = cameraWrapper.clientHeight;
-        const wrapperRatio = wrapperWidth / wrapperHeight;
+        const expectedHeight = wrapperWidth / videoRatio;
         
-        let guideWidth, guideHeight;
+        // Frissítjük a wrapper magasságát, hogy pont akkora legyen, mint a videó
+        cameraWrapper.style.minHeight = '0px'; 
+        cameraWrapper.style.height = `${expectedHeight}px`;
+    }
+
+    // 2. Fotózás és VÁGÁS az A4 keret alapján (Javított matek)
+    document.getElementById('captureBtn').addEventListener('click', () => {
+        // A videó tényleges mérete pixelben (forrás)
+        const vW = video.videoWidth;
+        const vH = video.videoHeight;
         
-        // A4 arány
-        const a4Ratio = 210 / 297; 
+        // A megjelenített videó mérete a képernyőn (cél)
+        const dW = video.clientWidth;
+        const dH = video.clientHeight;
 
-        // Kiszámoljuk, mekkora a CSS keret pixelben kifejezett mérete a videóhoz képest
-        guideWidth = Math.min(wrapperWidth - 40, 400); // calc(100% - 40px) és max-width: 400px
-        guideHeight = guideWidth / a4Ratio;
+        // A keret (guide) CSS méretei
+        const gW = scannerGuide.clientWidth;
+        const gH = scannerGuide.clientHeight;
 
-        const videoPixelsPerCssPixel = video.videoWidth / wrapperWidth;
-        
-        const cropX = (video.videoWidth - (guideWidth * videoPixelsPerCssPixel)) / 2;
-        const cropY = (video.videoHeight - (guideHeight * videoPixelsPerCssPixel)) / 2;
-        const cropWidth = guideWidth * videoPixelsPerCssPixel;
-        const cropHeight = guideHeight * videoPixelsPerCssPixel;
+        // Aránypár kiszámítása (Megjelenített pixel -> Forrás pixel)
+        const scaleX = vW / dW;
+        const scaleY = vH / dH;
 
+        // A keret pontos pozíciója a videó közepén
+        const cropWidth = gW * scaleX;
+        const cropHeight = gH * scaleY;
+        const cropX = (vW - cropWidth) / 2;
+        const cropY = (vH - cropHeight) / 2;
+
+        // Vágás
         canvas.width = cropWidth;
         canvas.height = cropHeight;
-        
-        // Csak a kereten belüli részt rajzoljuk
         ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
 
-        addProcessedPage(canvas.toDataURL('image/jpeg', 1.0)); // Teljes minőség, a tömörítés letöltéskor történik
+        addProcessedPage(canvas.toDataURL('image/jpeg', 1.0));
     });
 
     // 3. Képfeltöltés kezelése
@@ -186,7 +232,6 @@
             const file = files[i];
             const reader = new FileReader();
             reader.onload = (event) => {
-                // Hozzáadjuk a feltöltött képet
                 addProcessedPage(event.target.result);
             };
             reader.readAsDataURL(file);
@@ -195,7 +240,6 @@
 
     // Kép hozzáadása a memóriához és felület frissítése
     function addProcessedPage(src) {
-        // Alap feldolgozás (színmód)
         const tempImg = new Image();
         tempImg.src = src;
         tempImg.onload = () => {
@@ -211,7 +255,7 @@
                 let data = imgData.data;
                 for (let i = 0; i < data.length; i += 4) {
                     let avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                    let val = avg > 115 ? 255 : 0;
+                    let val = avg > 120 ? 255 : 0;
                     data[i] = data[i + 1] = data[i + 2] = val;
                 }
                 tempCtx.putImageData(imgData, 0, 0);
@@ -222,15 +266,15 @@
         }
     }
 
-    // Tömörítés csúszka változása
+    // Tömörítés csúszka
     compression.addEventListener('input', (e) => {
         let val = e.target.value;
         let text = val > 0.8 ? "Enyhe" : val > 0.5 ? "Közepes" : "Erős";
         compValue.innerText = `${text} minőség (${val})`;
-        updateUI(); // Frissíti a méretbecslést
+        updateUI();
     });
 
-    // Felület és fájlméret frissítése
+    // UI frissítés
     function updateUI() {
         gallery.innerHTML = '';
         let totalBytes = 0;
@@ -244,7 +288,6 @@
             img.src = src;
             item.appendChild(img);
             
-            // Törlés gomb minden képhez
             const removeBtn = document.createElement('button');
             removeBtn.innerHTML = '×';
             removeBtn.className = 'remove-btn';
@@ -253,18 +296,15 @@
 
             gallery.appendChild(item);
             
-            // Fájlméret becslése Base64 string hossza * tömörítési tényező alapján
             let base64Length = src.length - (src.indexOf(',') + 1);
             totalBytes += Math.ceil(base64Length * 0.75 * quality);
         });
 
-        // ~3KB a PDF szerkezet miatt
         let estimatedMB = (totalBytes + 3000) / (1024 * 1024);
         
         pageCountTxt.innerText = pages.length;
         estSizeTxt.innerText = estimatedMB > 0 ? estimatedMB.toFixed(2) + ' MB' : '0.00 MB';
         
-        // Gombok be/kikapcsolása
         document.getElementById('downloadBtn').disabled = pages.length === 0;
         document.getElementById('clearBtn').disabled = pages.length === 0;
     }
@@ -277,10 +317,11 @@
         }
     });
 
-    // 4. PDF Letöltése az elnevezéssel
+    // 4. PDF Letöltés
     document.getElementById('downloadBtn').addEventListener('click', () => {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        // Az A4 méretet mondjuk meg a jsPDF-nek
+        const doc = new jsPDF({ format: 'a4' });
         const quality = parseFloat(compression.value);
 
         pages.forEach((pageData, index) => {
@@ -290,8 +331,11 @@
             const pdfWidth = doc.internal.pageSize.getWidth();
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
             
-            // JPEG hozzáadása a beállított tömörítéssel (quality)
-            doc.addImage(pageData, 'JPEG', 0, 0, pdfWidth, pdfHeight, null, 'SLOW');
+            // Középre igazítjuk a képet a PDF oldalon
+            const xOffset = (doc.internal.pageSize.getWidth() - pdfWidth) / 2;
+            const yOffset = (doc.internal.pageSize.getHeight() - pdfHeight) / 2;
+
+            doc.addImage(pageData, 'JPEG', xOffset, yOffset, pdfWidth, pdfHeight, null, 'FAST');
         });
 
         let finalName = fileNameInput.value.trim() || fileNameInput.placeholder;
