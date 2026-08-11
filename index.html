@@ -26,7 +26,6 @@
         .ui-section { margin-top: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
         .gallery { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; justify-content: center; }
         
-        /* JAVÍTÁS: A galéria elemek CSS-e */
         .gallery-item { position: relative; display: inline-block; }
         .gallery img { height: 100px; border: 2px solid #ddd; border-radius: 6px; object-fit: cover; }
         .remove-btn { position: absolute; top: -8px; right: -8px; background: #d32f2f; color: white; border-radius: 50%; width: 24px; height: 24px; font-size: 14px; font-weight: bold; border: none; cursor: pointer; padding: 0; line-height: 24px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
@@ -141,12 +140,11 @@
         img.src = src;
     }
 
-    // 5. JAVÍTÁS: Aszinkron újratömörítés (Megvárja a képeket)
+    // 5. Aszinkron újratömörítés
     async function reprocessAll() {
         const isBW = document.querySelector('input[name="colorMode"]:checked').value === 'bw';
         const quality = parseFloat(document.getElementById('compression').value);
         
-        // Végigmegyünk az összes oldalon, és megvárjuk, amíg mindegyik feldolgozásra kerül
         await Promise.all(pages.map((p) => {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -174,7 +172,7 @@
             const div = document.createElement('div'); div.className = 'gallery-item';
             
             const img = document.createElement('img'); 
-            img.src = p.processed; // Most már biztosan van benne adat
+            img.src = p.processed; 
             
             const btn = document.createElement('button'); 
             btn.innerHTML = '×'; btn.className = 'remove-btn';
@@ -197,20 +195,21 @@
         if(confirm("Törlöd az eddigi oldalakat?")) { pages = []; updateUI(); }
     };
 
-    // 7. JAVÍTÁS: PDF Letöltés
+    // 7. JAVÍTÁS: PDF Letöltés (Most már betölti a jsPDF-et!)
     document.getElementById('downloadBtn').onclick = () => {
         try {
+            // EZ A SOR HIÁNYZOTT AZ ELŐZŐBŐL:
+            const { jsPDF } = window.jspdf; 
+            
             const doc = new jsPDF();
             pages.forEach((p, i) => {
                 if (i > 0) doc.addPage();
-                // A jsPDF automatikusan felismeri a base64-et. 
-                // A 'FAST' paramétert elvettem, hogy biztosan működjön mobilokon is.
                 doc.addImage(p.processed, 'JPEG', 10, 10, 190, 277);
             });
             const filename = document.getElementById('fileNameInput').value.trim() || 'Szkennelt_dokumentum';
             doc.save(filename + '.pdf');
         } catch(e) {
-            alert("Hiba történt a PDF generálása közben.");
+            alert("Hiba történt a PDF generálása közben: " + e.message);
             console.error(e);
         }
     };
