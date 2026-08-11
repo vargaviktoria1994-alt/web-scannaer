@@ -11,36 +11,19 @@
     <style>
         body { font-family: sans-serif; background: #f0f2f5; color: #333; margin: 0; padding: 10px; text-align: center; }
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h2 { font-size: 1.3em; margin-bottom: 10px; color: #1a73e8; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        
-        button, .file-input-label { background: #1a73e8; color: white; border: none; padding: 12px 10px; margin: 3px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.3s; width: calc(50% - 6px); display: inline-flex; align-items: center; justify-content: center; text-decoration: none; box-sizing: border-box; vertical-align: middle;}
-        button:hover, .file-input-label:hover { filter: brightness(0.9); }
-        button:disabled { background: #ccc !important; cursor: not-allowed; }
-        .btn-danger { background: #d32f2f; }
-        .btn-danger:hover { background: #a71d2a; }
+        button, .file-input-label { background: #1a73e8; color: white; border: none; padding: 12px; margin: 5px 2px; border-radius: 8px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: calc(50% - 10px); box-sizing: border-box; }
         .btn-success { background: #388e3c; }
-        .btn-success:hover { background: #2e7d32; }
+        .btn-danger { background: #d32f2f; }
         .btn-warning { background: #f57c00; }
-        .btn-warning:hover { background: #ef6c00; }
-
-        /* Kamera dizájn */
+        
         .camera-wrapper { position: relative; display: none; margin: 10px auto; width: 100%; border-radius: 8px; overflow: hidden; background: #000; min-height: 250px; }
         video { width: 100%; height: auto; display: block; object-fit: contain; }
-        .scanner-guide { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; max-width: 320px; aspect-ratio: 210/297; border: 3px solid #ff9800; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6); pointer-events: none; border-radius: 4px; box-sizing: border-box; opacity: 1;}
+        .scanner-guide { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; max-width: 320px; aspect-ratio: 210/297; border: 3px solid #ff9800; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6); pointer-events: none; }
 
-        .ui-section { margin: 15px 0; border: 1px solid #eee; border-radius: 10px; padding: 12px; background: #fff; text-align: left;}
-        .controls { text-align: left; font-size: 13px; background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 10px; border: 1px solid #ddd;}
-        .controls div { margin-bottom: 10px; }
-        input[type="range"] { width: 100%; margin-top: 5px; cursor: pointer; }
-        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin: 10px 0; font-size: 14px; text-align: center; box-sizing: border-box; }
-        input[type="file"] { display: none; }
-        
-        .stats-box { background: #e3f2fd; color: #0d47a1; padding: 10px; border-radius: 8px; margin: 10px 0; font-weight: bold; display: flex; justify-content: space-between; font-size: 13px; }
-        
-        .gallery { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; justify-content: center; min-height: 50px; }
-        .gallery-item { position: relative; }
-        .gallery img { height: 85px; border: 2px solid #ddd; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .gallery-item .remove-btn { position: absolute; top: -5px; right: -5px; background: #d32f2f; color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; line-height: 22px; border: none; cursor: pointer; padding: 0; font-weight: bold; }
+        .ui-section { margin: 15px 0; border: 1px solid #eee; border-radius: 10px; padding: 12px; background: #fff; text-align: left; }
+        input[type="range"] { width: 100%; }
+        .gallery { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; justify-content: center; }
+        .gallery img { height: 80px; border: 2px solid #ddd; border-radius: 6px; }
     </style>
 </head>
 <body>
@@ -48,28 +31,141 @@
 <div class="container">
     <h2>📄 Webes PDF Eszköz</h2>
     
-    <!-- Felső gombok -->
-    <div style="display: flex; justify-content: center; gap: 5px;">
-        <button id="startCameraBtn" style="width: 100%; max-width: 100%;">📷 Kamera Indítása</button>
-    </div>
+    <button id="startCameraBtn" style="width: 100%; max-width: 100%;">📷 Kamera Indítása</button>
     
-    <!-- Kamera -->
     <div class="camera-wrapper" id="cameraWrapper">
         <video id="video" autoplay playsinline></video>
-        <div class="scanner-guide" id="scannerGuide"></div>
+        <div class="scanner-guide"></div>
     </div>
-    <button id="captureBtn" class="btn-success" style="display: none; width: 100%; max-width: 100%; margin-top: 5px; margin-bottom: 10px;">📸 Kép készítése</button>
+    <button id="captureBtn" class="btn-success" style="display: none; width: 100%; max-width: 100%; margin-top: 5px;">📸 Kép készítése</button>
     
     <div class="ui-section">
-        <!-- Bemeneti gombok (Kép ÉS PDF) -->
-        <div style="display: flex; justify-content: center; gap: 5px;">
+        <div style="display: flex; gap: 5px; justify-content: center;">
             <label for="imageUpload" class="file-input-label btn-success">📁 Képek</label>
             <input type="file" id="imageUpload" accept="image/*" multiple style="display:none;">
-            
-            <!-- JAVÍTÁS: "Melegő PDF" -> "Meglévő PDF" -->
-            <label for="pdfUpload" class="file-input-label btn-warning" id="pdfInputLabel">📄 Meglévő PDF</label>
+            <label for="pdfUpload" class="file-input-label btn-warning">📄 Meglévő PDF</label>
             <input type="file" id="pdfUpload" accept="application/pdf" style="display:none;">
         </div>
         
-        <p><b>Színmód:Mentés után a GitHub-on várj 1-2 percet, majd frissítsd az oldalt a telefonodon! A PDF mérete most már garantáltan drasztikusan kisebb lesz.
-            
+        <p><b>Színmód:</b><br>
+        <input type="radio" name="colorMode" value="color" checked onchange="reprocessAll()"> Színes
+        <input type="radio" name="colorMode" value="bw" onchange="reprocessAll()" style="margin-left:20px;"> Fekete-fehér</p>
+        
+        <p><b>PDF Tömörítés:</b><br>
+        <input type="range" id="compression" min="0.1" max="1.0" step="0.1" value="0.6" oninput="updateUI()">
+        <div id="compValue" style="text-align: right; font-size: 12px;">Minőség (0.6)</div></p>
+
+        <div style="background: #e3f2fd; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px;">
+            Oldalak: <span id="pageCount">0</span> | Várható méret: <span id="estSize">0.00 MB</span>
+        </div>
+        <div class="gallery" id="gallery"></div>
+    </div>
+
+    <input type="text" id="fileNameInput" placeholder="Fájlnév" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box;">
+    <div style="display: flex; gap: 5px;">
+        <button id="clearBtn" class="btn-danger" disabled>🗑️ Törlés</button>
+        <button id="downloadBtn" class="btn-success" disabled>⬇️ Letöltés</button>
+    </div>
+</div>
+
+<script>
+    let pages = []; 
+
+    // Kamera
+    document.getElementById('startCameraBtn').onclick = async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        document.getElementById('video').srcObject = stream;
+        document.getElementById('cameraWrapper').style.display = 'block';
+        document.getElementById('captureBtn').style.display = 'inline-flex';
+        document.getElementById('startCameraBtn').style.display = 'none';
+    };
+
+    // Fotózás
+    document.getElementById('captureBtn').onclick = () => {
+        const v = document.getElementById('video'), c = document.createElement('canvas');
+        c.width = v.videoWidth; c.height = v.videoHeight;
+        c.getContext('2d').drawImage(v, 0, 0);
+        processImage(c.toDataURL('image/jpeg', 1.0));
+    };
+
+    // Feltöltés
+    document.getElementById('imageUpload').onchange = (e) => {
+        Array.from(e.target.files).forEach(f => {
+            const reader = new FileReader();
+            reader.onload = (ev) => processImage(ev.target.result);
+            reader.readAsDataURL(f);
+        });
+    };
+
+    document.getElementById('pdfUpload').onchange = async (e) => {
+        const file = e.target.files[0];
+        const pdf = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width; canvas.height = viewport.height;
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+            processImage(canvas.toDataURL('image/jpeg', 1.0));
+        }
+    };
+
+    function processImage(src) {
+        const img = new Image();
+        img.src = src;
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX = 1800;
+            const ratio = img.height > MAX ? MAX / img.height : 1;
+            canvas.width = img.width * ratio; canvas.height = img.height * ratio;
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            pages.push({ original: canvas.toDataURL('image/jpeg', 1.0), processed: '' });
+            reprocessAll();
+        };
+    }
+
+    function reprocessAll() {
+        const isBW = document.querySelector('input[name="colorMode"]:checked').value === 'bw';
+        const quality = parseFloat(document.getElementById('compression').value);
+        pages.forEach(p => {
+            const img = new Image();
+            img.src = p.original;
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width; canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (isBW) ctx.filter = 'grayscale(100%) contrast(500%) brightness(120%)';
+            ctx.drawImage(img, 0, 0);
+            p.processed = canvas.toDataURL('image/jpeg', quality);
+        });
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('gallery').innerHTML = '';
+        pages.forEach((p, i) => {
+            const div = document.createElement('div'); div.className = 'gallery-item';
+            const img = document.createElement('img'); img.src = p.processed;
+            const btn = document.createElement('button'); btn.innerHTML = '×'; btn.className = 'remove-btn';
+            btn.onclick = () => { pages.splice(i, 1); updateUI(); };
+            div.appendChild(img); div.appendChild(btn); document.getElementById('gallery').appendChild(div);
+        });
+        document.getElementById('pageCount').innerText = pages.length;
+        document.getElementById('estSize').innerText = (pages.length * 0.4).toFixed(2) + ' MB';
+        document.getElementById('downloadBtn').disabled = pages.length === 0;
+        document.getElementById('clearBtn').disabled = pages.length === 0;
+        document.getElementById('compValue').innerText = `Minőség: ${document.getElementById('compression').value}`;
+    }
+
+    document.getElementById('downloadBtn').onclick = () => {
+        const doc = new jsPDF();
+        pages.forEach((p, i) => {
+            if (i > 0) doc.addPage();
+            doc.addImage(p.processed, 'JPEG', 10, 10, 190, 277);
+        });
+        doc.save((document.getElementById('fileNameInput').value || 'scan') + '.pdf');
+    };
+    
+    document.getElementById('clearBtn').onclick = () => { pages = []; updateUI(); };
+</script>
+</body>
+</html>
