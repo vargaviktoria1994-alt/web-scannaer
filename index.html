@@ -19,7 +19,7 @@
         .btn-warning { background: #f57c00; }
         .btn:disabled { background: #ccc; cursor: not-allowed; }
         
-        .camera-wrapper { position: relative; display: none; margin: 10px auto; width: 100%; border-radius: 8px; overflow: hidden; background: #000; }
+        .camera-wrapper { position: relative; display: none; margin: 10px auto; width: 100%; border-radius: 8px; overflow: hidden; background: #000; min-height: 250px; }
         video { width: 100%; height: auto; display: block; object-fit: contain; }
         .scanner-guide { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; aspect-ratio: 210/297; border: 3px solid #ff9800; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6); pointer-events: none; }
 
@@ -152,7 +152,8 @@
                     const canvas = document.createElement('canvas');
                     canvas.width = img.width; canvas.height = img.height;
                     const ctx = canvas.getContext('2d');
-                    if (isBW) ctx.filter = 'grayscale(100%) contrast(500%) brightness(120%)';
+                    // MODIFIED: Lower contrast and brightness for better readability
+                    if (isBW) ctx.filter = 'grayscale(100%) contrast(180%) brightness(105%)';
                     ctx.drawImage(img, 0, 0);
                     p.processed = canvas.toDataURL('image/jpeg', quality);
                     resolve();
@@ -195,10 +196,9 @@
         if(confirm("Törlöd az eddigi oldalakat?")) { pages = []; updateUI(); }
     };
 
-    // 7. JAVÍTÁS: PDF Letöltés (Most már betölti a jsPDF-et!)
+    // 7. PDF Letöltés
     document.getElementById('downloadBtn').onclick = () => {
         try {
-            // EZ A SOR HIÁNYZOTT AZ ELŐZŐBŐL:
             const { jsPDF } = window.jspdf; 
             
             const doc = new jsPDF();
