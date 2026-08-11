@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Webes PDF Szkenner</title>
-    <!-- Külső könyvtárak (ezek végzik a nagy munkát) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
@@ -14,11 +13,11 @@
         .container { max-width: 500px; margin: 0 auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #1a73e8; }
         
-        /* Gombok és vezérlők */
         .btn { background: #1a73e8; color: white; border: none; padding: 12px; margin: 5px 2px; border-radius: 8px; font-weight: bold; cursor: pointer; text-align: center; display: inline-flex; align-items: center; justify-content: center; width: calc(50% - 10px); box-sizing: border-box; }
         .btn-success { background: #388e3c; }
         .btn-danger { background: #d32f2f; }
         .btn-warning { background: #f57c00; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
         
         .camera-wrapper { position: relative; display: none; margin: 10px auto; width: 100%; border-radius: 8px; overflow: hidden; background: #000; }
         video { width: 100%; height: auto; display: block; object-fit: contain; }
@@ -26,7 +25,11 @@
 
         .ui-section { margin-top: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
         .gallery { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; justify-content: center; }
-        .gallery img { height: 70px; border: 1px solid #ccc; border-radius: 4px; }
+        
+        /* JAVÍTÁS: A galéria elemek CSS-e */
+        .gallery-item { position: relative; display: inline-block; }
+        .gallery img { height: 100px; border: 2px solid #ddd; border-radius: 6px; object-fit: cover; }
+        .remove-btn { position: absolute; top: -8px; right: -8px; background: #d32f2f; color: white; border-radius: 50%; width: 24px; height: 24px; font-size: 14px; font-weight: bold; border: none; cursor: pointer; padding: 0; line-height: 24px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
@@ -40,7 +43,7 @@
         <video id="video" autoplay playsinline></video>
         <div class="scanner-guide"></div>
     </div>
-    <button id="captureBtn" class="btn-success" style="display: none; width: 100%;">📸 Kép készítése</button>
+    <button id="captureBtn" class="btn-success" style="display: none; width: 100%; margin-top: 5px;">📸 Kép készítése</button>
     
     <div class="ui-section">
         <div style="display: flex; gap: 5px;">
@@ -55,10 +58,10 @@
         <input type="radio" name="colorMode" value="bw" onchange="reprocessAll()" style="margin-left:10px;"> Fekete-fehér</p>
         
         <p><b>PDF Tömörítés (Minőség):</b>
-        <input type="range" id="compression" min="0.1" max="1.0" step="0.1" value="0.6" oninput="updateUI()" onchange="reprocessAll()"></p>
+        <input type="range" id="compression" min="0.1" max="1.0" step="0.1" value="0.6" onchange="reprocessAll()"></p>
 
-        <div style="background: #e3f2fd; padding: 8px; border-radius: 6px; font-weight: bold; font-size: 12px; text-align: center;">
-            Oldalak: <span id="pageCount">0</span> | Becsült méret: <span id="estSize">0 MB</span>
+        <div style="background: #e3f2fd; padding: 8px; border-radius: 6px; font-weight: bold; font-size: 13px; text-align: center;">
+            Oldalak: <span id="pageCount">0</span> | Becsült méret: <span id="estSize">0.00 MB</span>
         </div>
         <div class="gallery" id="gallery"></div>
     </div>
@@ -73,7 +76,7 @@
 <script>
     let pages = []; // { original: Base64, processed: Base64 }
 
-    // Kamera vezérlés
+    // 1. Kamera
     document.getElementById('startCameraBtn').onclick = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
@@ -81,14 +84,13 @@
             document.getElementById('cameraWrapper').style.display = 'block';
             document.getElementById('captureBtn').style.display = 'inline-block';
             document.getElementById('startCameraBtn').style.display = 'none';
-        } catch(e) { alert("Nem sikerült elérni a kamerát!"); }
+        } catch(e) { alert("Hiba: Nem lehet elérni a kamerát!"); }
     };
 
-    // Kép készítése (vágással)
+    // 2. Kép készítése
     document.getElementById('captureBtn').onclick = () => {
         const v = document.getElementById('video'), c = document.createElement('canvas');
         const guide = document.querySelector('.scanner-guide');
-        // Vágás arányai
         const scaleX = v.videoWidth / v.clientWidth;
         const scaleY = v.videoHeight / v.clientHeight;
         c.width = guide.clientWidth * scaleX;
@@ -97,84 +99,120 @@
         addImageToStore(c.toDataURL('image/jpeg', 1.0));
     };
 
-    // Fájl feltöltések
+    // 3. Fájl feltöltés
     document.getElementById('imageUpload').onchange = (e) => {
         Array.from(e.target.files).forEach(f => {
             const reader = new FileReader();
             reader.onload = (ev) => addImageToStore(ev.target.result);
             reader.readAsDataURL(f);
         });
+        e.target.value = '';
     };
 
     document.getElementById('pdfUpload').onchange = async (e) => {
         const file = e.target.files[0];
-        const pdf = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const vp = page.getViewport({ scale: 1.5 });
-            const canvas = document.createElement('canvas');
-            canvas.width = vp.width; canvas.height = vp.height;
-            await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
-            addImageToStore(canvas.toDataURL('image/jpeg', 1.0));
-        }
+        if (!file) return;
+        try {
+            const pdf = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const vp = page.getViewport({ scale: 1.5 });
+                const canvas = document.createElement('canvas');
+                canvas.width = vp.width; canvas.height = vp.height;
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+                addImageToStore(canvas.toDataURL('image/jpeg', 1.0));
+            }
+        } catch(err) { alert("Hiba a PDF beolvasásakor!"); }
+        e.target.value = '';
     };
 
+    // 4. Kép tárolása
     function addImageToStore(src) {
         const img = new Image();
-        img.src = src;
         img.onload = () => {
             const c = document.createElement('canvas');
-            const MAX = 1800; // Optimalizált felbontás
+            const MAX = 1800; 
             const r = img.height > MAX ? MAX / img.height : 1;
             c.width = img.width * r; c.height = img.height * r;
             c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
             pages.push({ original: c.toDataURL('image/jpeg', 1.0), processed: '' });
             reprocessAll();
         };
+        img.src = src;
     }
 
-    // Filterek és újratömörítés
-    function reprocessAll() {
+    // 5. JAVÍTÁS: Aszinkron újratömörítés (Megvárja a képeket)
+    async function reprocessAll() {
         const isBW = document.querySelector('input[name="colorMode"]:checked').value === 'bw';
         const quality = parseFloat(document.getElementById('compression').value);
-        pages.forEach(p => {
-            const img = new Image();
-            img.src = p.original;
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width; canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            if (isBW) ctx.filter = 'grayscale(100%) contrast(500%) brightness(120%)';
-            ctx.drawImage(img, 0, 0);
-            p.processed = canvas.toDataURL('image/jpeg', quality);
-        });
+        
+        // Végigmegyünk az összes oldalon, és megvárjuk, amíg mindegyik feldolgozásra kerül
+        await Promise.all(pages.map((p) => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width; canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    if (isBW) ctx.filter = 'grayscale(100%) contrast(500%) brightness(120%)';
+                    ctx.drawImage(img, 0, 0);
+                    p.processed = canvas.toDataURL('image/jpeg', quality);
+                    resolve();
+                };
+                img.src = p.original;
+            });
+        }));
+        
         updateUI();
     }
 
+    // 6. UI Frissítése
     function updateUI() {
         const gal = document.getElementById('gallery');
         gal.innerHTML = '';
         pages.forEach((p, i) => {
             const div = document.createElement('div'); div.className = 'gallery-item';
-            const img = document.createElement('img'); img.src = p.processed;
-            const btn = document.createElement('button'); btn.innerHTML = '×'; btn.className = 'remove-btn';
+            
+            const img = document.createElement('img'); 
+            img.src = p.processed; // Most már biztosan van benne adat
+            
+            const btn = document.createElement('button'); 
+            btn.innerHTML = '×'; btn.className = 'remove-btn';
             btn.onclick = () => { pages.splice(i, 1); updateUI(); };
-            div.appendChild(img); div.appendChild(btn); gal.appendChild(div);
+            
+            div.appendChild(img); 
+            div.appendChild(btn); 
+            gal.appendChild(div);
         });
+        
         document.getElementById('pageCount').innerText = pages.length;
-        document.getElementById('estSize').innerText = (pages.length * 0.4).toFixed(2) + " MB";
-        document.getElementById('downloadBtn').disabled = pages.length === 0;
-        document.getElementById('clearBtn').disabled = pages.length === 0;
+        document.getElementById('estSize').innerText = (pages.length * 0.4 * parseFloat(document.getElementById('compression').value)).toFixed(2) + " MB";
+        
+        const hasPages = pages.length > 0;
+        document.getElementById('downloadBtn').disabled = !hasPages;
+        document.getElementById('clearBtn').disabled = !hasPages;
     }
 
-    document.getElementById('clearBtn').onclick = () => { pages = []; updateUI(); };
+    document.getElementById('clearBtn').onclick = () => { 
+        if(confirm("Törlöd az eddigi oldalakat?")) { pages = []; updateUI(); }
+    };
 
+    // 7. JAVÍTÁS: PDF Letöltés
     document.getElementById('downloadBtn').onclick = () => {
-        const doc = new jsPDF();
-        pages.forEach((p, i) => {
-            if (i > 0) doc.addPage();
-            doc.addImage(p.processed, 'JPEG', 10, 10, 190, 277, undefined, 'FAST');
-        });
-        doc.save((document.getElementById('fileNameInput').value || 'scan') + '.pdf');
+        try {
+            const doc = new jsPDF();
+            pages.forEach((p, i) => {
+                if (i > 0) doc.addPage();
+                // A jsPDF automatikusan felismeri a base64-et. 
+                // A 'FAST' paramétert elvettem, hogy biztosan működjön mobilokon is.
+                doc.addImage(p.processed, 'JPEG', 10, 10, 190, 277);
+            });
+            const filename = document.getElementById('fileNameInput').value.trim() || 'Szkennelt_dokumentum';
+            doc.save(filename + '.pdf');
+        } catch(e) {
+            alert("Hiba történt a PDF generálása közben.");
+            console.error(e);
+        }
     };
 </script>
 </body>
